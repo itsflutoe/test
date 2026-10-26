@@ -235,7 +235,7 @@
 <script>
     // --- CONFIGURATION ---
     const GROQ_API_KEY = "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"; 
-    const MODEL_NAME = "qwen/qwen3.8-27b";
+    const MODEL_NAME = "openai/gpt-oss-120b"; 
     
     const systemPrompt = {
         "role": "system", 
@@ -245,6 +245,7 @@
     let conversationHistory = [systemPrompt];
     let isListening = false;
     let isSpeaking = false;
+    let currentUtterance = null; // Fixes the Chrome garbage collection bug
 
     // UI Elements
     const statusBadge = document.getElementById("statusBadge");
@@ -272,13 +273,11 @@
 
         voices.forEach((voice) => {
             const option = document.createElement('option');
-            // Store unique voice identifier (Name)
             option.value = voice.name;
             option.textContent = `${voice.name} (${voice.lang})${voice.default ? ' — Default' : ''}`;
             voiceSelect.appendChild(option);
         });
 
-        // Keep selection if previously chosen, or auto-pick a natural voice
         if (currentlySelectedName && Array.from(voiceSelect.options).some(o => o.value === currentlySelectedName)) {
             voiceSelect.value = currentlySelectedName;
         } else {
@@ -439,36 +438,35 @@
         isSpeaking = true; 
         updateStatus("SPEAKING...", "#00ff88");
         
-        // Stop any active audio before starting a new one
         window.speechSynthesis.cancel(); 
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.0; 
-        utterance.pitch = 1.0; 
+        // Store globally to prevent browser garbage collection cancellation
+        currentUtterance = new SpeechSynthesisUtterance(text);
+        currentUtterance.rate = 1.0; 
+        currentUtterance.pitch = 1.0; 
 
-        // Fetch fresh voices dynamically
         const freshVoices = window.speechSynthesis.getVoices();
         const selectedVoiceName = voiceSelect.value;
 
         if (selectedVoiceName && freshVoices.length > 0) {
             const matchedVoice = freshVoices.find(v => v.name === selectedVoiceName);
             if (matchedVoice) {
-                utterance.voice = matchedVoice;
-                utterance.lang = matchedVoice.lang; // Force language lock so browser respects choice
+                currentUtterance.voice = matchedVoice;
+                currentUtterance.lang = matchedVoice.lang;
             }
         }
 
-        utterance.onend = () => {
+        currentUtterance.onend = () => {
             isSpeaking = false;
             updateStatus("READY", "#00f2ff");
         };
 
-        utterance.onerror = () => {
+        currentUtterance.onerror = () => {
             isSpeaking = false;
             updateStatus("READY", "#00f2ff");
         };
 
-        window.speechSynthesis.speak(utterance);
+        window.speechSynthesis.speak(currentUtterance);
     }
 </script>
 
