@@ -251,7 +251,7 @@
         <div class="hud-card">
             <div class="card-header">System Diagnostics</div>
             <div class="diag-row"><span>CORE MODEL:</span> <span class="diag-val">QWEN-27B</span></div>
-            <div class="diag-row"><span>VOICE LOCALE:</span> <span class="diag-val">en-AU / Fallback</span></div>
+            <div class="diag-row"><span>VOICE LOCALE:</span> <span class="diag-val">DEFAULT SYS</span></div>
             <div class="diag-row"><span>AUDIO MATRIX:</span> <span class="diag-val">ACTIVE</span></div>
             <div class="diag-row"><span>PROCESSING:</span> <span class="diag-val">OPTIMAL</span></div>
             <div class="card-header" style="margin-top: 15px;">Protocols</div>
@@ -368,7 +368,7 @@
     }
     renderCore();
 
-    // --- SPEECH RECOGNITION (STT) ---
+    // --- SPEECH RECOGNITION (STT) - MANUAL TOGGLE ONLY ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
 
@@ -376,7 +376,7 @@
         recognition = new SpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = false;
-        recognition.lang = 'en-AU';
+        recognition.lang = 'en-US';
 
         micBtn.addEventListener("click", () => {
             if (isSpeaking) {
@@ -475,7 +475,7 @@
         }
     }
 
-    // --- ROBUST TEXT-TO-SPEECH (TTS) PIPELINE ---
+    // --- DEFAULT SYSTEM TEXT-TO-SPEECH (TTS) PIPELINE ---
     function speakText(text) {
         if (!('speechSynthesis' in window)) {
             setStatus("SYSTEM READY", "#00f2ff");
@@ -489,49 +489,29 @@
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 1.0;
         utterance.pitch = 0.95;
+        utterance.lang = 'en-US'; // Uses browser default system voice directly
 
-        const voices = window.speechSynthesis.getVoices();
-        const selectedVoice = voices.find(v => v.lang === 'en-AU' || v.name.includes('Australia')) ||
-                              voices.find(v => v.lang.startsWith('en')) ||
-                              voices[0];
-
-        if (selectedVoice) {
-            utterance.voice = selectedVoice;
-            utterance.lang = selectedVoice.lang;
-        } else {
-            utterance.lang = 'en-US';
-        }
-
-        // Fail-safe timeout to prevent app from getting permanently stuck on SPEAKING state
+        // Safety failsafe timer to prevent permanent SPEAKING lock
         const speechTimeout = setTimeout(() => {
             if (isSpeaking) {
                 isSpeaking = false;
                 setStatus("SYSTEM READY", "#00f2ff");
-                restartListening();
             }
         }, Math.max(4000, text.length * 80));
+
+        utterance.onend = () => {
+            clearTimeout(speechTimeout);
+            isSpeaking = false;
+            setStatus("SYSTEM READY", "#00f2ff");
+        };
 
         utterance.onerror = () => {
             clearTimeout(speechTimeout);
             isSpeaking = false;
             setStatus("SYSTEM READY", "#00f2ff");
-            restartListening();
         };
 
         window.speechSynthesis.speak(utterance);
-    }
-
-    function restartListening() {
-        if (!SpeechRecognition) return;
-        setTimeout(() => {
-            if (!isSpeaking && !isListening) {
-                try { recognition.start(); } catch (e) {}
-            }
-        }, 300);
-    }
-
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
     }
 </script>
 
