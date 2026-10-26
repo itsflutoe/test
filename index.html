@@ -511,13 +511,6 @@
             }
         }, Math.max(4000, text.length * 80));
 
-        utterance.onend = () => {
-            clearTimeout(speechTimeout);
-            isSpeaking = false;
-            setStatus("SYSTEM READY", "#00f2ff");
-            restartListening();
-        };
-
         utterance.onerror = () => {
             clearTimeout(speechTimeout);
             isSpeaking = false;
