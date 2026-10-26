@@ -63,6 +63,7 @@
             transition: all 0.3s ease;
         }
 
+        /* Voice Selector Bar */
         .voice-config {
             display: flex;
             gap: 10px;
@@ -235,7 +236,7 @@
 <script>
     // --- CONFIGURATION ---
     const GROQ_API_KEY = "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"; 
-    const MODEL_NAME = "openai/gpt-oss-120b"; 
+    const MODEL_NAME = "qwen/qwen3.8-27b";
     
     const systemPrompt = {
         "role": "system", 
@@ -245,7 +246,7 @@
     let conversationHistory = [systemPrompt];
     let isListening = false;
     let isSpeaking = false;
-    let currentUtterance = null; // Fixes the Chrome garbage collection bug
+    let availableVoices = [];
 
     // UI Elements
     const statusBadge = document.getElementById("statusBadge");
@@ -261,35 +262,34 @@
         statusBadge.style.color = color;
     }
 
-    // --- RELIABLE VOICE LOADING AND POPULATION ---
+    // --- POPULATE VOICE DROPDOWN ---
     function loadVoices() {
         if (!('speechSynthesis' in window)) return;
 
-        const voices = window.speechSynthesis.getVoices();
-        if (voices.length === 0) return;
+        availableVoices = window.speechSynthesis.getVoices();
+        
+        if (availableVoices.length === 0) return;
 
-        const currentlySelectedName = voiceSelect.value;
         voiceSelect.innerHTML = '';
 
-        voices.forEach((voice) => {
+        availableVoices.forEach((voice, index) => {
             const option = document.createElement('option');
-            option.value = voice.name;
+            option.value = index;
             option.textContent = `${voice.name} (${voice.lang})${voice.default ? ' — Default' : ''}`;
             voiceSelect.appendChild(option);
         });
 
-        if (currentlySelectedName && Array.from(voiceSelect.options).some(o => o.value === currentlySelectedName)) {
-            voiceSelect.value = currentlySelectedName;
-        } else {
-            const preferredVoice = voices.find(v => 
-                v.lang.includes('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Zira') || v.name.includes('Jenny') || v.name.includes('Samantha'))
-            );
-            if (preferredVoice) {
-                voiceSelect.value = preferredVoice.name;
-            }
+        // Try selecting a natural English/US/Female voice by default if available
+        const preferredIndex = availableVoices.findIndex(v => 
+            (v.lang.includes('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Zira') || v.name.includes('Jenny') || v.name.includes('Samantha')))
+        );
+
+        if (preferredIndex !== -1) {
+            voiceSelect.value = preferredIndex;
         }
     }
 
+    // Handle asynchronous voice loading across different browsers
     if ('speechSynthesis' in window) {
         loadVoices();
         window.speechSynthesis.onvoiceschanged = loadVoices;
@@ -428,7 +428,6 @@
             .trim();
     }
 
-    // --- ACCURATE VOICE SELECTION & MATCHING ---
     function speakText(text) {
         if (!('speechSynthesis' in window)) {
             updateStatus("READY", "#00f2ff");
@@ -437,36 +436,29 @@
 
         isSpeaking = true; 
         updateStatus("SPEAKING...", "#00ff88");
-        
         window.speechSynthesis.cancel(); 
 
-        // Store globally to prevent browser garbage collection cancellation
-        currentUtterance = new SpeechSynthesisUtterance(text);
-        currentUtterance.rate = 1.0; 
-        currentUtterance.pitch = 1.0; 
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0; 
+        utterance.pitch = 1.0; 
 
-        const freshVoices = window.speechSynthesis.getVoices();
-        const selectedVoiceName = voiceSelect.value;
-
-        if (selectedVoiceName && freshVoices.length > 0) {
-            const matchedVoice = freshVoices.find(v => v.name === selectedVoiceName);
-            if (matchedVoice) {
-                currentUtterance.voice = matchedVoice;
-                currentUtterance.lang = matchedVoice.lang;
-            }
+        // Apply selected voice from dropdown
+        const selectedIndex = voiceSelect.value;
+        if (selectedIndex !== "" && availableVoices[selectedIndex]) {
+            utterance.voice = availableVoices[selectedIndex];
         }
 
-        currentUtterance.onend = () => {
+        utterance.onend = () => {
             isSpeaking = false;
             updateStatus("READY", "#00f2ff");
         };
 
-        currentUtterance.onerror = () => {
+        utterance.onerror = () => {
             isSpeaking = false;
             updateStatus("READY", "#00f2ff");
         };
 
-        window.speechSynthesis.speak(currentUtterance);
+        window.speechSynthesis.speak(utterance);
     }
 </script>
 
