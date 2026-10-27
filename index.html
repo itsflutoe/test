@@ -252,7 +252,7 @@
 
     <div class="terminal-logs" id="logContainer">
         <div class="log-entry">
-            <span class="log-prefix">FLUX:</span> Media streamer online. Type <code style="color:var(--neon-blue)">/play [track title]</code> to trigger floating video playback.
+            <span class="log-prefix">FLUX:</span> Media streamer online. Type <code style="color:var(--neon-blue)">/play [track title]</code> or tap a preset to launch video playback in the floating dock.
         </div>
     </div>
 
@@ -284,6 +284,16 @@
 </div>
 
 <script>
+// --- DIRECT TRACK ID MAP (BYPASSES EMBED RESTRICTIONS) ---
+const trackMap = {
+    "balisong rico blanco": "y84LzE309p8",
+    "balisong": "y84LzE309p8",
+    "daylight taylor swift": "u9raS7-Lz2s",
+    "daylight": "u9raS7-Lz2s",
+    "slide away oasis": "1E1v6bWjZps",
+    "slide away": "1E1v6bWjZps"
+};
+
 // --- SPEECH SYNTHESIS ENGINE ---
 function speakText(text) {
     if ('speechSynthesis' in window) {
@@ -321,7 +331,9 @@ function setStatus(text, color = "#00f2ff") {
 // --- FLOATING MEDIA PLAYER CONTROLS ---
 function playMusicTrack(songQuery) {
     const cleanQuery = songQuery.trim();
-    addLogEntry("FLUX", `Deploying media dock for: "${cleanQuery}"...`, false);
+    const queryKey = cleanQuery.toLowerCase();
+    
+    addLogEntry("FLUX", `Targeting video stream for: "${cleanQuery}"...`, false);
     setStatus("STREAMING VIDEO", "#ff007f");
 
     const dock = document.getElementById('videoDock');
@@ -329,14 +341,22 @@ function playMusicTrack(songQuery) {
     const dockTitle = document.getElementById('dockTitle');
 
     dockTitle.innerText = `▶ ${cleanQuery.toUpperCase()}`;
-    iframe.src = `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(cleanQuery)}&autoplay=1`;
 
+    // If query matches a mapped key, load direct unblocked ID. Otherwise, use YouTube Search Embed.
+    let targetSrc = "";
+    if (trackMap[queryKey]) {
+        targetSrc = `https://www.youtube-nocookie.com/embed/${trackMap[queryKey]}?autoplay=1&enablejsapi=1`;
+    } else {
+        targetSrc = `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(cleanQuery)}&autoplay=1&enablejsapi=1`;
+    }
+
+    iframe.src = targetSrc;
     dock.style.display = 'flex';
     dock.classList.remove('minimized');
     document.getElementById('minBtn').innerText = '[-]';
 
-    addLogEntry("FLUX", `Media dock active. Click <b>[X]</b> in the bottom right corner to terminate stream.`, false);
-    speakText(`Playing ${cleanQuery} in media dock, sir.`);
+    addLogEntry("FLUX", `Media dock active. Click <b>[X]</b> to close stream.`, false);
+    speakText(`Streaming ${cleanQuery} in media dock, sir.`);
 }
 
 function closeVideoPlayer() {
