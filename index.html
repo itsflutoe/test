@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <title>FLUX // AUDIO & VIDEO COMMAND TERMINAL</title>
+    <title>FLUX // MEDIA COMMAND TERMINAL</title>
     <style>
         :root {
             --bg-color: #050811;
@@ -252,7 +252,7 @@
 
     <div class="terminal-logs" id="logContainer">
         <div class="log-entry">
-            <span class="log-prefix">FLUX:</span> Media module initialized. Type <code style="color:var(--neon-blue)">/play [track title]</code> to trigger floating video playback with quick termination.
+            <span class="log-prefix">FLUX:</span> Media streamer online. Type <code style="color:var(--neon-blue)">/play [track title]</code> to trigger floating video playback.
         </div>
     </div>
 
@@ -264,7 +264,7 @@
     </div>
 
     <div class="terminal-input-container">
-        <input type="text" class="cmd-input" id="cmdInput" placeholder="Type /play [song name] or ask FLUX..." onkeypress="handleKeyPress(event)">
+        <input type="text" class="cmd-input" id="cmdInput" placeholder="Type /play [song name] or prompt FLUX..." onkeypress="handleKeyPress(event)">
         <button class="btn" onclick="submitCommand()">EXECUTE</button>
     </div>
 </div>
@@ -328,11 +328,9 @@ function playMusicTrack(songQuery) {
     const iframe = document.getElementById('videoIframe');
     const dockTitle = document.getElementById('dockTitle');
 
-    // Update title and URL
     dockTitle.innerText = `▶ ${cleanQuery.toUpperCase()}`;
     iframe.src = `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(cleanQuery)}&autoplay=1`;
 
-    // Show dock
     dock.style.display = 'flex';
     dock.classList.remove('minimized');
     document.getElementById('minBtn').innerText = '[-]';
@@ -345,7 +343,6 @@ function closeVideoPlayer() {
     const dock = document.getElementById('videoDock');
     const iframe = document.getElementById('videoIframe');
     
-    // Stop audio/video playback instantly by resetting src
     iframe.src = '';
     dock.style.display = 'none';
 
